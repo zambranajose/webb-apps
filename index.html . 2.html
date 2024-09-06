@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lluvia de Corazones</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: black;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: Arial, sans-serif;
+            color: white;
+            position: relative;
+        }
+
+        #heartCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .message {
+            z-index: 1;
+            text-align: center;
+            font-size: 24px;
+            padding: 20px;
+            border: 2px solid white;
+            border-radius: 10px;
+            background-color: rgba(0, 0, 0, 0.5);
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        .button-container {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            margin: 0 10px;
+            font-size: 18px;
+            background-color: #333;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .button:hover {
+            background-color: #555;
+        }
+
+        .response-message {
+            display: none;
+            z-index: 1;
+            position: absolute;
+            bottom: 20px;
+            font-size: 24px;
+            color: white;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="heartCanvas"></canvas>
+
+    <div class="message">
+        <p>¿vamos a comer helado ? :)</p>
+        <div class="button-container">
+            <button class="button" id="yesButton">Sí</button>
+            <button class="button" id="noButton">No</button>
+        </div>
+    </div>
+
+    <div class="response-message" id="responseMessage">
+        sabía que aceptarías :)
+    </div>
+    
+    <audio id="backgroundMusic" preload="auto">
+        <source src="https://drive.google.com/uc?export=download&id=1YVUWckWrk9ss9Dvr2_ziAWooPncxxKrI" type="audio/mpeg">
+    </audio>
+
+    <script>
+        const canvas = document.getElementById('heartCanvas');
+        const ctx = canvas.getContext('2d');
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const hearts = [];
+
+        function drawHeart(x, y, size) {
+            const hue = Math.floor(Math.random() * 360);
+            ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.bezierCurveTo(x, y - size / 2, x - size / 2, y - size / 2, x - size / 2, y);
+            ctx.bezierCurveTo(x - size / 2, y + size / 4, x, y + size / 2, x, y + size);
+            ctx.bezierCurveTo(x, y + size / 2, x + size / 2, y + size / 4, x + size / 2, y);
+            ctx.bezierCurveTo(x + size / 2, y - size / 2, x, y - size / 2, x, y);
+            ctx.fill();
+            ctx.closePath();
+        }
+
+        function createFallingHeart() {
+            const x = Math.random() * canvas.width;
+            const y = 0;
+            const size = Math.random() * 20 + 10;
+            const speed = Math.random() * 3 + 1;
+            const rotationSpeed = Math.random() * 2 - 1;
+            hearts.push({ x, y, size, speed, rotationSpeed });
+        }
+
+        function updateHearts() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let i = hearts.length - 1; i >= 0; i--) {
+                const heart = hearts[i];
+                heart.y += heart.speed;
+                ctx.save();
+                ctx.translate(heart.x, heart.y);
+                ctx.rotate(heart.rotationSpeed);
+                drawHeart(0, 0, heart.size);
+                ctx.restore();
+
+                if (heart.y > canvas.height) {
+                    hearts.splice(i, 1);
+                }
+            }
+        }
+
+        function animateHearts() {
+            createFallingHeart();
+            updateHearts();
+            requestAnimationFrame(animateHearts);
+        }
+
+        let stopAnimation = false;
+        let animatingBack = false;
+        const moveSpeed = 5;
+
+        function moveButtonToCorner() {
+            const button = document.getElementById('noButton');
+            const corners = [
+                { x: 10, y: 10 },
+                { x: window.innerWidth - button.offsetWidth - 10, y: 10 },
+                { x: 10, y: window.innerHeight - button.offsetHeight - 10 },
+                { x: window.innerWidth - button.offsetWidth - 10, y: window.innerHeight - button.offsetHeight - 10 }
+            ];
+            const randomCorner = corners[Math.floor(Math.random() * corners.length)];
+            button.style.position = 'absolute';
+            button.style.left = `${randomCorner.x}px`;
+            button.style.top = `${randomCorner.y}px`;
+        }
+
+        document.getElementById('yesButton').addEventListener('click', () => {
+            document.getElementById('responseMessage').style.display = 'block';
+            stopAnimation = true;
+        });
+
+        document.getElementById('noButton').addEventListener('click', () => {
+            moveButtonToCorner();
+            if (!animatingBack) {
+                moveHeartToCorner();
+            }
+        });
+
+        function moveHeartToCorner() {
+            const corners = [
+                { x: 0, y: 0 },
+                { x: canvas.width, y: 0 },
+                { x: 0, y: canvas.height },
+                { x: canvas.width, y: canvas.height }
+            ];
+            const randomCorner = corners[Math.floor(Math.random() * corners.length)];
+            let currentX = canvas.width / 2;
+            let currentY = canvas.height / 2;
+
+            const moveInterval = setInterval(() => {
+                if (currentX !== randomCorner.x || currentY !== randomCorner.y) {
+                    const deltaX = randomCorner.x - currentX;
+                    const deltaY = randomCorner.y - currentY;
+                    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+                    if (distance <= moveSpeed) {
+                        currentX = randomCorner.x;
+                        currentY = randomCorner.y;
+                    } else {
+                        currentX += (deltaX / distance) * moveSpeed;
+                        currentY += (deltaY / distance) * moveSpeed;
+                    }
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    drawHeart(currentX, currentY, 20);
+                } else {
+                    clearInterval(moveInterval);
+                    setTimeout(() => {
+                        animateBack();
+                    }, 1000);
+                }
+            }, 1000 / 60);
+        }
+
+        function animateBack() {
+            if (!animatingBack) {
+                animatingBack = true;
+                let currentX = canvas.width / 2;
+                let currentY = canvas.height / 2;
+
+                const moveInterval = setInterval(() => {
+                    if (currentX !== initialX || currentY !== initialY) {
+                        const deltaX = initialX - currentX;
+                        const deltaY = initialY - currentY;
+                        const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+                        if (distance <= moveSpeed) {
+                            currentX = initialX;
+                            currentY = initialY;
+                        } else {
+                            currentX += (deltaX / distance) * moveSpeed;
+                            currentY += (deltaY / distance) * moveSpeed;
+                        }
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        drawHeart(currentX, currentY, 20);
+                    } else {
+                        clearInterval(moveInterval);
+                        animatingBack = false;
+                        animateHearts();
+                    }
+                }, 1000 / 60);
+            }
+        }
+
+        // Reproducir el audio automáticamente al cargar la página
+        window.addEventListener('load', () => {
+            const audio = document.getElementById('backgroundMusic');
+            audio.play().catch(error => {
+                console.log('Error al reproducir el audio:', error);
+            });
+        });
+
+        animateHearts();
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+    </script>
+</body>
+</html>
+
